@@ -1,0 +1,14 @@
+[package]
+name = "pi_tree"
+version = "0.1.0"
+authors = ["suncy <530739162@qq.com>"]
+edition = "2021"
+description = "A tree structure implemented by dense memory linked list"
+repository = "https://github.com/GaiaWorld/pi_tree.git"
+license = "MIT OR Apache-2.0"
+keywords = ["pi", "tree"]
+
+[dependencies]
+pi_slotmap = "0.1"
+log = "0.4"
+
