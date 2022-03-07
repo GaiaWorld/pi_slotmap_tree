@@ -27,11 +27,7 @@ impl<K: Key, T: Default> IndexMut<K> for Tree<K, T> {
     }
 }
 
-pub trait Empty {
-	fn empty() -> Self;
-}
-
-impl<K: Key + Empty, T: Default> Tree<K, T> {
+impl<K: Key, T: Default> Tree<K, T> {
 	pub fn with_capacity(capacity: usize) -> Self {
 		Self {
 			map: SecondaryMap::with_capacity(capacity),
@@ -63,33 +59,33 @@ impl<K: Key + Empty, T: Default> Tree<K, T> {
     }
     /// index为0表示插入到子节点队列前， 如果index大于子节点队列长度，则插入到子节点队列最后。parent如果为0 表示设置为根节点。 如果parent的layer大于0
 	/// order表示在子节点中的顺序，当大于子节点长度时，插入到队列最后
-    pub fn insert_child(&mut self, id: K, parent: Option<K>, mut order: usize) -> usize {
-        if let Some(parent) = parent {
+    pub fn insert_child(&mut self, id: K, parent: K, mut order: usize) -> usize {
+        if !parent.is_null() {
             let (layer, prev, next) = match self.map.get(parent) {
                 Some(n) if order >= n.children.len => (
                     if n.layer > 0 { n.layer + 1 } else { 0 },
                     n.children.tail,
-                    None,
+                    K::null(),
                 ),
                 Some(n) if order + order >= n.children.len => {
                     let mut prev = n.children.tail;
-                    let mut next = None;
+                    let mut next = K::null();
                     order = n.children.len - order;
-                    while order < usize::max_value() && prev.is_some(){
+                    while order < usize::max_value() && !prev.is_null(){
                         order -= 1;
                         next = prev;
-                        let node = unsafe { self.map.get_unchecked(next.clone().unwrap()) };
+                        let node = unsafe { self.map.get_unchecked(next) };
                         prev = node.prev;
                     }
                     (if n.layer > 0 { n.layer + 1 } else { 0 }, prev, next)
                 }
                 Some(n) => {
-                    let mut prev = None;
+                    let mut prev = K::null();
                     let mut next = n.children.head;
-                    while order < usize::max_value() && next.is_some() {
+                    while order < usize::max_value() && !next.is_null() {
                         order -= 1;
                         prev = next;
-                        let node = unsafe { self.map.get_unchecked(prev.unwrap()) };
+                        let node = unsafe { self.map.get_unchecked(prev) };
                         next = node.next;
                     }
                     (if n.layer > 0 { n.layer + 1 } else { 0 }, prev, next)
@@ -105,19 +101,19 @@ impl<K: Key + Empty, T: Default> Tree<K, T> {
     pub fn insert_brother(&mut self, id: K, brother: K, insert: InsertType) -> usize {
         let (parent, layer, prev, next) = match self.map.get(brother) {
             Some(n) => match insert {
-                InsertType::Front => (n.parent, n.layer, n.prev, Some(brother)),
-                InsertType::Back => (n.parent, n.layer, Some(brother), n.next),
+                InsertType::Front => (n.parent, n.layer, n.prev, brother),
+                InsertType::Back => (n.parent, n.layer, brother, n.next),
             },
             _ => panic!("invalid brother: {:?}", brother),
         };
-        if let Some(parent) = parent {
+        if !parent.is_null() {
             self.insert_node(id, parent, layer, prev, next)
         } else {
             self.insert_root(id)
         }
     }
     /// 获得节点信息， 一般用于remove和destroy
-    pub fn get_info(&mut self, id: K) -> Option<(Option<K>, usize, usize, Option<K>, Option<K>, Option<K>)> {
+    pub fn get_info(&mut self, id: K) -> Option<(K, usize, usize, K, K, K)> {
         match self.map.get(id) {
             Some(n) => Some((n.parent, n.layer, n.count, n.prev, n.next, n.children.head)),
             _ => return None,
@@ -127,25 +123,25 @@ impl<K: Key + Empty, T: Default> Tree<K, T> {
     pub fn remove(
         &mut self,
         id: K,
-        (parent, layer, count, prev, next, head): (Option<K>, usize, usize, Option<K>, Option<K>, Option<K>),
+        (parent, layer, count, prev, next, head): (K, usize, usize, K, K, K),
     ) {
         if layer > 0 {
             self.remove_tree(head);
         }
-        if let Some(parent) = parent {
+        if !parent.is_null() {
             self.remove_node(parent, count + 1, prev, next)
         }
         let node = unsafe { self.map.get_unchecked_mut(id) };
-        node.parent = None;
+        node.parent = K::null();
         node.layer = 0;
-        node.prev = None;
-        node.next = None;
+        node.prev = K::null();
+        node.next = K::null();
     }
     /// 销毁子节点， recursive表示是否递归销毁
     pub fn destroy(
         &mut self,
         id: K,
-        (parent, layer, count, prev, next, mut head): (Option<K>, usize, usize, Option<K>, Option<K>, Option<K>),
+        (parent, layer, count, prev, next, mut head): (K, usize, usize, K, K, K),
         recursive: bool,
     ) {
         if recursive {
@@ -153,87 +149,88 @@ impl<K: Key + Empty, T: Default> Tree<K, T> {
         } else {
             self.map.remove(id);
             if layer > 0 {
-                while let Some(head_value) = head {
+                while !head.is_null() {
                     let child = {
-                        let n = unsafe { self.map.get_unchecked_mut(head_value) };
-                        n.parent= None;
+                        let n = unsafe { self.map.get_unchecked_mut(head) };
+                        n.parent= K::null();
                         n.layer = 0;
                         head = n.next;
-                        n.prev = None;
-                        n.next = None;
+                        n.prev = K::null();
+                        n.next = K::null();
                         n.children.head
                     };
                     self.remove_tree(child);
                 }
             } else {
-                while let Some(head_value) = head {
-                    let n = unsafe { self.map.get_unchecked_mut(head_value) };
-                    n.parent= None;
+                while !head.is_null() {
+                    let n = unsafe { self.map.get_unchecked_mut(head) };
+                    n.parent= K::null();
                     head = n.next;
-                    n.prev = None;
-                    n.next = None;
+                    n.prev = K::null();
+                    n.next = K::null();
                 }
             }
         }
-        if let Some(parent) = parent {
+        if !parent.is_null() {
             self.remove_node(parent, count + 1, prev, next)
         }
     }
     /// 迭代指定节点的所有子元素
-    pub fn iter_mut(&mut self, node_children_head: Option<K>) -> ChildrenMutIterator<K, T> {
+    pub fn iter_mut(&mut self, node_children_head: K) -> ChildrenMutIterator<K, T> {
         ChildrenMutIterator {
             inner: &mut self.map,
             head: node_children_head,
         }
     }
     /// 迭代指定节点的所有子元素
-    pub fn iter(&self, node_children_head: Option<K>) -> ChildrenIterator<K, T> {
+    pub fn iter(&self, node_children_head: K) -> ChildrenIterator<K, T> {
         ChildrenIterator {
             inner: &self.map,
             head: node_children_head,
         }
     }
     /// 迭代指定节点的所有递归子元素
-    pub fn recursive_iter(&self, node_children_head: Option<K>) -> RecursiveIterator<K, T> {
-		let (head, len) = match node_children_head {
-			Some(h) => (h, 1),
-			None => (K::empty(), 0)
+    pub fn recursive_iter(&self, node_children_head: K) -> RecursiveIterator<K, T> {
+		let (head, len) = if node_children_head.is_null() {
+			(K::null(), 0)
+		} else {
+			(node_children_head, 1)
 		};
         RecursiveIterator {
             inner: &self.map,
             arr: [
                 head,
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
-                K::empty(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
+                K::null(),
             ],
             len,
         }
@@ -244,7 +241,7 @@ impl<K: Key + Empty, T: Default> Tree<K, T> {
         let head = match self.map.get_mut(id) {
             Some(n) => {
 				log::info!("n.parent: {:?}, layer:{:?}", n.parent, n.layer);
-                if n.parent.is_some() {
+                if !n.parent.is_null() {
                     panic!("has a parent node, id: {:?}", id)
                 }
                 if n.layer > 0 {
@@ -268,8 +265,8 @@ impl<K: Key + Empty, T: Default> Tree<K, T> {
         id: K,
         parent: K,
         layer: usize,
-        prev: Option<K>,
-        next: Option<K>,
+        prev: K,
+        next: K,
     ) -> usize {
 		// // 调用该方法，该节点可能已经存在，并且是将该节点插入到原位置
 		// // 如果插入到原位置，则无需操作
@@ -278,8 +275,8 @@ impl<K: Key + Empty, T: Default> Tree<K, T> {
 		// }
         let (count, fix_prev, fix_next) = match self.map.get_mut(id) {
             Some(n) => {
-				if let Some(n_parent) = n.parent {
-					if n_parent != parent {
+				if !n.parent.is_null() {
+					if n.parent != parent {
                         panic!("has a parent node, id: {:?}", id)
                     }
 
@@ -294,45 +291,45 @@ impl<K: Key + Empty, T: Default> Tree<K, T> {
                         panic!("already on the tree, id: {:?}", id)
                     }
 					// 不存在父节，直接挂在树上
-					n.parent = Some(parent);
+					n.parent = parent;
                     n.layer = layer;
                     n.prev = prev;
 					n.next = next;
-                    (n.count + 1, n.children.head, None)
+                    (n.count + 1, n.children.head, K::null())
 				}
             }
             _ => panic!("invalid id: "),//panic!("invalid id: {}", id),
 		};
         // 修改prev和next的节点
-        if let Some(prev) = prev {
+        if !prev.is_null() {
             let node = unsafe { self.map.get_unchecked_mut(prev) };
-            node.next = Some(id);
+            node.next = id;
         }
-        if let Some(next) = next {
+        if !next.is_null() {
             let node = unsafe { self.map.get_unchecked_mut(next) };
-            node.prev = Some(id);
+            node.prev = id;
         }
         if count == 0 {
             // 同层调整
-            if let Some(fix_prev) = fix_prev {
+            if !fix_prev.is_null() {
                 let node = unsafe { self.map.get_unchecked_mut(fix_prev) };
                 node.next = fix_next;
             }
-            if let Some(fix_next) = fix_next {
+            if !fix_next.is_null() {
                 let node = unsafe { self.map.get_unchecked_mut(fix_next) };
                 node.prev = fix_prev;
             }
 
-            if prev.is_none() || next.is_none() || fix_prev.is_none() || fix_next.is_none() {
+            if prev.is_null() || next.is_null() || fix_prev.is_null() || fix_next.is_null() {
                 let node = unsafe { self.map.get_unchecked_mut(parent) };
-                if prev.is_none() {
-                    node.children.head = Some(id);
-                } else if fix_prev.is_none() {
+                if prev.is_null() {
+                    node.children.head = id;
+                } else if fix_prev.is_null() {
                     node.children.head = fix_next;
                 }
-                if next.is_none() {
-                    node.children.tail = Some(id);
-                } else if fix_next.is_none() {
+                if next.is_null() {
+                    node.children.tail = id;
+                } else if fix_next.is_null() {
                     node.children.tail = fix_prev;
                 }
             }
@@ -341,11 +338,11 @@ impl<K: Key + Empty, T: Default> Tree<K, T> {
         let p = {
             // 修改parent的children, count
 			let node = unsafe { self.map.get_unchecked_mut(parent) };
-            if prev.is_none() {
-                node.children.head = Some(id);
+            if prev.is_null() {
+                node.children.head = id;
             }
-            if next.is_none() {
-                node.children.tail =Some(id);
+            if next.is_null() {
+                node.children.tail = id;
             }
             node.children.len += 1;
             node.count += count;
@@ -361,10 +358,10 @@ impl<K: Key + Empty, T: Default> Tree<K, T> {
         layer
     }
     // 插入到树上， 就是递归设置每个子节点的layer
-    fn insert_tree(&mut self, mut id: Option<K>, layer: usize) {
-        while let Some(id_value) = id {
+    fn insert_tree(&mut self, mut id: K, layer: usize) {
+        while !id.is_null() {
             let head = {
-                let n = unsafe { self.map.get_unchecked_mut(id_value) };
+                let n = unsafe { self.map.get_unchecked_mut(id) };
                 n.layer = layer;
                 id = n.next;
                 n.children.head
@@ -373,10 +370,10 @@ impl<K: Key + Empty, T: Default> Tree<K, T> {
         }
     }
     // 从树上移除， 就是递归设置每个子节点的layer为0
-    fn remove_tree(&mut self, mut id: Option<K>) {
-        while let Some(id_value) = id {
+    fn remove_tree(&mut self, mut id: K) {
+        while !id.is_null() {
             let head = {
-                let n = unsafe { self.map.get_unchecked_mut(id_value) };
+                let n = unsafe { self.map.get_unchecked_mut(id) };
                 n.layer = 0;
                 id = n.next;
                 n.children.head
@@ -385,43 +382,43 @@ impl<K: Key + Empty, T: Default> Tree<K, T> {
         }
     }
     // 递归销毁
-    fn recursive_destroy(&mut self, parent: K, mut id: Option<K>) {
+    fn recursive_destroy(&mut self, parent: K, mut id: K) {
 		self.map.remove(parent);
-        while let Some(id_value) = id {
+        while !id.is_null() {
             let (next, head) = {
-                let n = unsafe { self.map.get_unchecked(id_value) };
+                let n = unsafe { self.map.get_unchecked(id) };
                 (n.next, n.children.head)
             };
-            self.recursive_destroy(id_value, head);
+            self.recursive_destroy(id, head);
             id = next;
         }
     }
     // 递归向上，修改节点的count
-    fn modify_count(&mut self, mut id: Option<K>, count: isize) {
-        while let Some(id_value) = id {
-            let n = unsafe { self.map.get_unchecked_mut(id_value) };
+    fn modify_count(&mut self, mut id: K, count: isize) {
+        while !id.is_null() {
+            let n = unsafe { self.map.get_unchecked_mut(id) };
             n.count = (n.count as isize + count) as usize;
             id = n.parent;
         }
     }
     // 移除节点
-    fn remove_node(&mut self, parent: K, count: usize, prev: Option<K>, next: Option<K>) {
+    fn remove_node(&mut self, parent: K, count: usize, prev: K, next: K) {
         // 修改prev和next的节点
-        if let Some(prev) = prev {
+        if !prev.is_null() {
             let node = unsafe { self.map.get_unchecked_mut(prev) };
 			node.next = next;
         }
-        if let Some(next) = next {
+        if !next.is_null() {
             let node = unsafe { self.map.get_unchecked_mut(next) };
 			node.prev = prev;
         }
         
             // 修改parent的children, count
             let node = unsafe { self.map.get_unchecked_mut(parent) };
-            if prev.is_none() {
+            if prev.is_null() {
                 node.children.head = next;
             }
-            if next.is_none() {
+            if next.is_null() {
                 node.children.tail = prev;
             }
             node.children.len -= 1;
@@ -438,11 +435,11 @@ impl<K: Key + Empty, T: Default> Tree<K, T> {
 
 #[derive(Debug, Clone)]
 pub struct Node<K: Key, T: Default> {
-    parent: Option<K>,      // 父节点
+    parent: K,      // 父节点
     layer: usize,       // 表示第几层，如果不在根上，则为0。 在根上，则起步为1
     count: usize,       // 所有的递归子节点的总数量
-    prev: Option<K>,        // 前ab节点
-    next: Option<K>,        // 后ab节点
+    prev: K,        // 前ab节点
+    next: K,        // 后ab节点
     children: NodeList<K>, // 子节点列表
     pub data: T,
 }
@@ -450,18 +447,18 @@ pub struct Node<K: Key, T: Default> {
 impl<K: Key, T: Default> Default for Node<K, T> {
 	fn default() -> Self{
 		Node {
-			parent: None,
+			parent: K::null(),
 			layer: 0,
 			count: 0,
-			prev: None,
-			next: None,
+			prev: K::null(),
+			next: K::null(),
 			children: NodeList::default(),
 			data: T::default(),
 		}
 	}
 }
 impl<K: Key, T: Default> Node<K, T> {
-    pub fn parent(&self) -> Option<K> {
+    pub fn parent(&self) -> K {
         self.parent
     }
     pub fn layer(&self) -> usize {
@@ -470,10 +467,10 @@ impl<K: Key, T: Default> Node<K, T> {
     pub fn count(&self) -> usize {
         self.count
     }
-    pub fn prev(&self) -> Option<K> {
+    pub fn prev(&self) -> K {
         self.prev
     }
-    pub fn next(&self) -> Option<K> {
+    pub fn next(&self) -> K {
         self.next
     }
     pub fn children(&self) -> &NodeList<K> {
@@ -483,32 +480,31 @@ impl<K: Key, T: Default> Node<K, T> {
 
 #[derive(Debug, Clone)]
 pub struct NodeList<K: Key> {
-    pub head: Option<K>,
-    pub tail: Option<K>,
+    pub head: K,
+    pub tail: K,
     pub len: usize,
 }
 
 impl<K: Key> Default for NodeList<K> {
 	fn default() -> Self{
 		NodeList{
-			head: None,
-			tail: None,
+			head: K::null(),
+			tail: K::null(),
 			len: 0,
 		}
 	}
 }
 pub struct ChildrenMutIterator<'a, K: Key, T: Default> {
     inner: &'a mut SecondaryMap<K, Node<K, T>>,
-    head: Option<K>,
+    head: K,
 }
 impl<'a, K: Key, T: Default> Iterator for ChildrenMutIterator<'a, K, T> {
     type Item = (K, &'a mut Node<K, T>);
-
     fn next(&mut self) -> Option<Self::Item> {
-		let head = match self.head {
-			None => return None,
-			Some(r) => r,
-		};
+		if self.head.is_null() {
+			return None;
+		}
+		let head = self.head;
 
         let inner = unsafe { &mut *(self.inner as *mut SecondaryMap<K, Node<K, T>>) };
         let n = unsafe { inner.get_unchecked_mut(head) };
@@ -520,19 +516,18 @@ impl<'a, K: Key, T: Default> Iterator for ChildrenMutIterator<'a, K, T> {
 }
 pub struct ChildrenIterator<'a, K: Key, T: Default> {
     inner: &'a SecondaryMap<K, Node<K, T>>,
-    head: Option<K>,
+    head: K,
 }
 
 impl<'a, K: Key, T: Default> Iterator for ChildrenIterator<'a, K, T> {
     type Item = (K, &'a Node<K, T>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let head = match self.head {
-			None => return None,
-			Some(r) => r,
-		};
-        let n = unsafe { self.inner.get_unchecked(head) };
-        let r = Some((head, n));
+		if self.head.is_null() {
+			return None;
+		}
+        let n = unsafe { self.inner.get_unchecked(self.head) };
+        let r = Some((self.head, n));
         self.head = n.next;
         r
     }
@@ -555,12 +550,12 @@ impl<'a, K: Key, T: Default> Iterator for RecursiveIterator<'a, K, T> {
         let head = self.arr[self.len];
         let n = unsafe { self.inner.get_unchecked(head) };
         let r = Some((head, n));
-        if let Some(next) = n.next {
-            self.arr[self.len] = next;
+        if !n.next.is_null() {
+            self.arr[self.len] = n.next;
             self.len += 1;
         }
-        if let Some(head) = n.children.head {
-            self.arr[self.len] = head;
+        if !n.children.head.is_null(){
+            self.arr[self.len] = n.children.head;
             self.len += 1;
         }
         r
