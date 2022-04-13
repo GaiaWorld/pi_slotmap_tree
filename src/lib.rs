@@ -383,8 +383,11 @@ impl<K: Null + Debug + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
 		// 递归向上修改count
 		self.modify_count(p_p, count as isize);
 
-        if layer > 0 {
+		// layer > 0, 并且不是同层调整时，才递归设置layer
+        if layer > 0 && count > 0 {
             self.insert_tree(fix_prev, layer + 1);
+			// 再次设置当前节点的layer，表明该节点是作为挂在主树上的一个子树的根
+			self.storage.set_layer(id, layer);
 		}
     }
 
@@ -398,8 +401,8 @@ impl<K: Null + Debug + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
 				panic!("");
 			},
 			None => {
-				self.storage.set_layer(id, 1);
 				self.storage.set_root(id);
+				self.storage.set_layer(id, 1);
 				let head = match self.storage.get_down(id) {
 					Some(down) => down.head,
 					None => {
@@ -413,6 +416,7 @@ impl<K: Null + Debug + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
 					}
 				};
 				self.insert_tree(head, 2);
+				self.storage.set_layer(id, 1); // 设置第二遍，表明为子树的根
 			},
 		};
     }
