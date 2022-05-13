@@ -5,6 +5,7 @@
 use std::fmt::Debug;
 use std::default::Default;
 use std::ops::Deref;
+use pi_print_any::out_any;
 
 use pi_null::Null;
 
@@ -132,7 +133,7 @@ impl<K: Null, S: Storage<K>> Deref for Tree<K, S> {
 	}
 }
 
-impl<K: Null + Debug + Eq + Clone + Copy, S> Tree<K, S> {
+impl<K: Null + Eq + Clone + Copy, S> Tree<K, S> {
 	pub fn new(storage: S) -> Self {
 		Self {
 			storage,
@@ -150,7 +151,7 @@ impl<K: Null + Debug + Eq + Clone + Copy, S> Tree<K, S> {
 	}
 }
 
-impl<K: Null + Debug + Eq + Clone + Copy, S: Storage<K>> Tree<K, S> {
+impl<K: Null + Eq + Clone + Copy, S: Storage<K>> Tree<K, S> {
 	/// 迭代指定节点的所有子元素
 	pub fn iter(&self, node_children_head: K) -> ChildrenIterator<K, S> {
 		ChildrenIterator {
@@ -206,7 +207,7 @@ impl<K: Null + Debug + Eq + Clone + Copy, S: Storage<K>> Tree<K, S> {
 	}
 }
 
-impl<K: Null + Debug + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
+impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
 
     /// index为0表示插入到子节点队列前， 如果index大于子节点队列长度，则插入到子节点队列最后。parent如果为0 表示设置为根节点。 如果parent的layer大于0
 	/// order表示在子节点中的顺序，当大于子节点长度时，插入到队列最后
@@ -255,7 +256,10 @@ impl<K: Null + Debug + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
                 InsertType::Front => (up.parent, layer.map_or(0, |l|{*l}), up.prev, brother),
                 InsertType::Back => (up.parent, layer.map_or(0, |l|{*l}), brother, up.next),
             },
-            _ => panic!("invalid brother: {:?}", brother),
+            _ => {
+				out_any!(log::error, "invalid brother: {:?}", brother);
+				panic!("")
+			}
         };
         if !parent.is_null() {
             self.insert_node(id, parent, layer, prev, next)
@@ -303,7 +307,8 @@ impl<K: Null + Debug + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
 				// 当前插入节点已经有一个父节点，并且该节点的父节点与当前指定的兄弟节点的父节点不是同一个
 				// 则panic
 				if n.parent != parent {
-					panic!("has a parent node, id: {:?}", id)
+					out_any!(log::error, "has a parent node, id: {:?}", id);
+					panic!("")
 				}
 
 				// 否则，当前节点存在一个父节点，则调整该节点的兄弟节点即可
@@ -397,7 +402,7 @@ impl<K: Null + Debug + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
 		match self.storage.get_up(id) {
 			// 将节点作为根节点插入到树失败，节点已经存在一个父
 			Some(up) => {
-				log::info!("insert_root fail, node has a parent, id: {:?}, parent: {:?}", id, up.parent);
+				out_any!(log::error, "insert_root fail, node has a parent, id: {:?}, parent: {:?}", id, up.parent);
 				panic!("");
 			},
 			None => {
