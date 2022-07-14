@@ -5,7 +5,7 @@
 use std::fmt::Debug;
 use std::default::Default;
 use std::ops::Deref;
-use pi_print_any::out_any;
+use pi_print_any::{out_any};
 
 use pi_null::Null;
 
@@ -342,7 +342,7 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
         }
         if !next.is_null() {
             let mut node = self.storage.up(next).clone();
-            node.next = id;
+            node.prev = id;
 			self.storage.set_up(next, node);
         }
         if count == 0 {
@@ -432,12 +432,13 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
         while !id.is_null() {
             let head = {
 				self.storage.set_layer(id, layer);
+                let head = self.storage.get_down(id).map_or(K::null(), |down|{down.head});
 				if let Some(up) = self.storage.get_up(id) {
 					id = up.next;
 				} else {
 					id = K::null();
 				}
-                self.storage.get_down(id).map_or(K::null(), |down|{down.head})
+				head
             };
             self.insert_tree(head, layer + 1);
         }
