@@ -1,6 +1,6 @@
 [package]
 name = "pi_slotmap_tree"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["suncy <530739162@qq.com>"]
 edition = "2021"
 description = "A tree structure implemented by dense memory linked list"
@@ -12,5 +12,5 @@ keywords = ["pi", "tree", "slotmap_tree"]
 pi_null = "0.1"
 log = "0.4"
 pi_print_any = "0.1"
-pi_slotmap = { git = "https://github.com/GaiaWorld/pi_slotmap.git" }
+pi_slotmap = "0.1"
 
