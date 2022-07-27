@@ -1,11 +1,15 @@
 /// 树
 /// 以链表结构维护一个树的子节点
 /// 本模块只关心树中节点的插入、删除等逻辑部分，具体描述树状结构的节点数据由外部维护
+pub mod slot_map_tree;
 
 use std::fmt::Debug;
 use std::default::Default;
 use std::ops::Deref;
 use pi_print_any::{out_any};
+
+pub use slot_map_tree::{SlotMapTree, TreeKey};
+
 
 use pi_null::Null;
 

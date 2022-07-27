@@ -12,4 +12,5 @@ keywords = ["pi", "tree", "slotmap_tree"]
 pi_null = "0.1"
 log = "0.4"
 pi_print_any = "0.1"
+pi_slotmap = { git = "https://github.com/GaiaWorld/pi_slotmap.git" }
 
