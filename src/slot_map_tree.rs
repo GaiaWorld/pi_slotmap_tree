@@ -2,7 +2,7 @@ use pi_null::Null;
 use std::hash::Hash;
 use pi_slotmap::{DefaultKey as DefaultKey1, Key, KeyData, SecondaryMap};
 
-use crate::{Up, Down, Storage, StorageMut};
+use crate::{Up, Down, Storage, StorageMut, Layer};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub struct TreeKey(DefaultKey1);
@@ -33,7 +33,7 @@ impl Null for TreeKey {
 pub struct SlotMapTree {
 	up: SecondaryMap<TreeKey, Up<TreeKey>>,
 	down: SecondaryMap<TreeKey, Down<TreeKey>>,
-	layer: SecondaryMap<TreeKey, usize>,
+	layer: SecondaryMap<TreeKey, Layer<TreeKey>>,
 }
 
 impl Storage<TreeKey> for SlotMapTree {
@@ -45,12 +45,12 @@ impl Storage<TreeKey> for SlotMapTree {
         self.up.get(k).unwrap()
     }
 
-    fn get_layer(&self, k: TreeKey) -> Option<&usize> {
+    fn get_layer(&self, k: TreeKey) -> Option<&Layer<TreeKey>> {
         self.layer.get(k)
     }
 
-    fn layer(&self, k: TreeKey) -> usize {
-        *self.layer.get(k).unwrap()
+    fn layer(&self, k: TreeKey) -> &Layer<TreeKey> {
+        self.layer.get(k).unwrap()
     }
 
     fn get_down(&self, k: TreeKey) -> Option<&Down<TreeKey>> {
@@ -87,7 +87,7 @@ impl StorageMut<TreeKey> for SlotMapTree {
         self.up.remove(k);
     }
 
-    fn set_layer(&mut self, k: TreeKey, layer: usize) {
+    fn set_layer(&mut self, k: TreeKey, layer: Layer<TreeKey>) {
         self.layer.insert(k, layer);
     }
 
