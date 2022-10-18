@@ -1,6 +1,6 @@
 [package]
 name = "pi_slotmap_tree"
-version = "0.3.0"
+version = "0.3.2"
 authors = ["suncy <530739162@qq.com>"]
 edition = "2021"
 description = "A tree structure implemented by dense memory linked list"

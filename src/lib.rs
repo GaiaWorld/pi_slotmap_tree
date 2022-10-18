@@ -61,6 +61,15 @@ pub struct Layer<K> {
 	root: K,
 }
 
+impl<K: Clone + Copy> Layer<K>  {
+	pub fn layer(&self) -> usize{
+		self.layer
+	}
+	pub fn root(&self) -> K {
+		self.root
+	}
+}
+
 impl<K: Null> Default for Layer<K>{
 	fn default() -> Self {
 		Layer {
