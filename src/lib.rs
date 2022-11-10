@@ -6,7 +6,7 @@ pub mod slot_map_tree;
 use std::fmt::Debug;
 use std::default::Default;
 use std::ops::Deref;
-use pi_print_any::{out_any};
+use pi_print_any::out_any;
 
 pub use slot_map_tree::{SlotMapTree, TreeKey};
 
@@ -62,9 +62,11 @@ pub struct Layer<K> {
 }
 
 impl<K: Clone + Copy> Layer<K>  {
+	#[inline]
 	pub fn layer(&self) -> usize{
 		self.layer
 	}
+	#[inline]
 	pub fn root(&self) -> K {
 		self.root
 	}
@@ -80,17 +82,21 @@ impl<K: Null> Default for Layer<K>{
 }
 
 impl<K: Clone + Copy> Up<K>  {
+	#[inline]
 	pub fn new(id: K, prev: K, next: K) -> Self{
 		Up {
 			parent: id, prev, next
 		}
 	}
+	#[inline]
 	pub fn parent(&self) -> K {
 		self.parent
 	}
+	#[inline]
 	pub fn prev(&self) -> K {
 		self.prev
 	}
+	#[inline]
 	pub fn next(&self) -> K {
 		self.next
 	}
@@ -116,22 +122,26 @@ pub struct Down<K> {
 }
 
 impl<K: Clone + Copy> Down<K>  {
+	#[inline]
 	pub fn new(head: K, tail: K, len: usize, count: usize) -> Self {
 		Down {
 			head, tail, len, count
 		}
 	}
 
+	#[inline]
 	pub fn head(&self) -> K {
 		self.head
 	}
+	#[inline]
 	pub fn tail(&self) -> K {
 		self.tail
 	}
+	#[inline]
 	pub fn len(&self) -> usize {
 		self.len
 	}
-
+	#[inline]
 	pub fn count(&self) -> usize {
 		self.count
 	}
@@ -161,16 +171,18 @@ impl<K: Null, S: Storage<K>> Deref for Tree<K, S> {
 	}
 }
 
+// Down {
+// 	head: K::null(),
+// 	tail: K::null(),
+// 	len: 0,
+// 	count: 1,
+// }
+
 impl<K: Null + Eq + Clone + Copy, S> Tree<K, S> {
 	pub fn new(storage: S) -> Self {
 		Self {
 			storage,
-			default_children: Down {
-				head: K::null(),
-				tail: K::null(),
-				len: 0,
-				count: 1,
-			},
+			default_children: Down { head: K::null(), tail: K::null(), len: 0, count: 1 },
 		}
 	}
 
@@ -182,11 +194,9 @@ impl<K: Null + Eq + Clone + Copy, S> Tree<K, S> {
 impl<K: Null + Eq + Clone + Copy, S: Storage<K>> Tree<K, S> {
 	/// 迭代指定节点的所有子元素
 	pub fn iter(&self, node_children_head: K) -> ChildrenIterator<K, S> {
-		ChildrenIterator {
-			inner: &self.storage,
-			head: node_children_head,
-		}
+		ChildrenIterator::new(&self.storage, node_children_head)
 	}
+
 	/// 迭代指定节点的所有递归子元素
 	pub fn recursive_iter(&self, node_children_head: K) -> RecursiveIterator<K, S> {
 		let (head, len) = if node_children_head.is_null() {
@@ -194,44 +204,7 @@ impl<K: Null + Eq + Clone + Copy, S: Storage<K>> Tree<K, S> {
 		} else {
 			(node_children_head, 1)
 		};
-		RecursiveIterator {
-			inner: &self.storage,
-			arr: [
-				head,
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-				K::null(),
-			],
-			len,
-		}
+		RecursiveIterator::new(&self.storage, head, len)
 	}
 }
 
@@ -572,6 +545,15 @@ pub struct ChildrenIterator<'a, K: Null + Copy + Clone, S: Storage<K>>{
     head: K,
 }
 
+impl<'a, K: Null + Copy + Clone, S: Storage<K>> ChildrenIterator<'a, K, S> {
+	pub fn new(s: &'a S, head: K) -> Self {
+		ChildrenIterator {
+			inner: s,
+			head
+		}
+	}
+}
+
 impl<'a, K: Null + Copy + Clone, S: Storage<K>> Iterator for ChildrenIterator<'a, K, S> {
     type Item = K;
 
@@ -592,6 +574,49 @@ pub struct RecursiveIterator<'a, K: Null, S: Storage<K>> {
     inner: &'a S,
     arr: [K; 32],
     len: usize,
+}
+
+impl<'a, K: Null + Copy + Clone, S: Storage<K>> RecursiveIterator<'a, K, S> {
+	pub fn new(s: &'a S, head: K, len: usize) -> Self {
+		RecursiveIterator {
+			inner: s,
+			arr: [
+				head,
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+				K::null(),
+			],
+			len,
+		}
+	}
 }
 
 impl<'a, K: Null + Copy + Clone, S: Storage<K>> Iterator for RecursiveIterator<'a, K, S> {
