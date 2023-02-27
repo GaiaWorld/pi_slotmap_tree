@@ -217,7 +217,7 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
             let (p_down, layer) = (
 				// self.storage.get_parent(parent), 
 				self.storage.get_down(parent).unwrap_or(&self.default_children),
-				self.storage.get_layer(parent).map_or(Layer::default(), |layer|{ Layer {layer: layer.layer + 1, root: layer.root}})
+				self.storage.get_layer(parent).map_or(Layer::default(), |layer|{ Layer {layer: if layer.layer == 0 {0} else{ layer.layer + 1 }, root: layer.root}})
 			);
 
 			let (prev, next) = if order >= p_down.len {
@@ -402,11 +402,11 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
         // 设置为根节点
 		match self.storage.get_up(id) {
 			// 将节点作为根节点插入到树失败，节点已经存在一个父
-			Some(up) => {
+			Some(up) if !up.parent.is_null() => {
 				out_any!(log::error, "insert_root fail, node has a parent, id: {:?}, parent: {:?}", id, up.parent);
-				panic!("");
+				return;
 			},
-			None => {
+			_ => {
 				self.storage.set_root(id);
 				self.storage.set_layer(id, Layer {layer: 1, root: id});
 				let head = match self.storage.get_down(id) {
