@@ -213,6 +213,12 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
     /// index为0表示插入到子节点队列前， 如果index大于子节点队列长度，则插入到子节点队列最后。parent如果为0 表示设置为根节点。 如果parent的layer大于0
 	/// order表示在子节点中的顺序，当大于子节点长度时，插入到队列最后
     pub fn insert_child(&mut self, id: K, parent: K, mut order: usize) {
+		if cfg!(debug_assertions) {
+			if id == parent {
+				panic!("{:?}", pi_print_any::out_any!(format, "insert_child fail, id and parent is equal, id: {:?}, parent: {:?}", id, parent));
+			}
+		}
+
         if !parent.is_null() {
             let (p_down, layer) = (
 				// self.storage.get_parent(parent), 
@@ -262,6 +268,11 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
 				panic!("")
 			}
         };
+		if cfg!(debug_assertions) {
+			if id == parent {
+				panic!("{:?}", pi_print_any::out_any!(format, "insert_brother fail, id and parent is equal, id: {:?}, parent: {:?}", id, parent));
+			}
+		}
         if !parent.is_null() {
             self.insert_node(id, parent, layer, prev, next)
         } else {
