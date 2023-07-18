@@ -8,6 +8,7 @@ use std::default::Default;
 use std::ops::Deref;
 use pi_print_any::out_any;
 
+use serde::{Serialize, Deserialize};
 pub use slot_map_tree::{SlotMapTree, TreeKey};
 
 
@@ -48,14 +49,14 @@ pub trait StorageMut<K: Null>: Storage<K> {
 }
 
 /// 父信息
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Up<K> {
 	parent: K, // parent的索引
 	prev: K, // 在父节点的子列表中，我的前一个节点
 	next: K, // 在父节点的子列表中，我的后一个节点
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Layer<K> {
 	layer: usize,
 	root: K,
@@ -113,7 +114,7 @@ impl<K: Null> Default for Up<K> {
 }
 
 /// 子信息
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Down<K> {
     pub head: K, // 子节点列表的的头节点
     pub tail: K, // 子节点列表的尾节点
