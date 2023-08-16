@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 keywords = ["pi", "tree", "slotmap_tree"]
 
 [dependencies]
-pi_null = "0.3"
+pi_null = "0.2"
 log = "0.4"
 pi_print_any = "0.1"
 pi_slotmap = "0.2"
