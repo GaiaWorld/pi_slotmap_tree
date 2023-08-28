@@ -287,9 +287,11 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
         id: K,
     ) {
 		// 删除所有递归子节点的layer
-		if self.storage.get_layer(id).is_some() {
-			self.remove_tree(self.storage.get_down(id).map_or(K::null(), |down|{down.head}));
-			self.storage.remove_root(id);
+		if let Some(layer) = self.storage.get_layer(id) {
+			if !layer.layer().is_null() {
+				self.remove_tree(self.storage.get_down(id).map_or(K::null(), |down|{down.head}));
+				self.storage.remove_root(id);
+			}
 		}
 
 		if let Some(up)  = self.storage.get_up_mut(id) {
