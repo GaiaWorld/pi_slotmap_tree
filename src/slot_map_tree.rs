@@ -7,10 +7,11 @@ use crate::{Up, Down, Storage, StorageMut, Layer};
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub struct TreeKey(DefaultKey1);
 
-unsafe impl Key for TreeKey {
+impl Key for TreeKey {
     fn data(&self) -> pi_slotmap::KeyData {
         self.0.data()
     }
+	fn index(&self) -> usize {self.0.index()}
 }
 
 impl From<KeyData> for TreeKey {
@@ -21,11 +22,11 @@ impl From<KeyData> for TreeKey {
 
 impl Null for TreeKey {
     fn null() -> Self {
-        Self(<DefaultKey1 as Key>::null())
+        Self(DefaultKey1::null())
     }
 
     fn is_null(&self) -> bool {
-		Key::is_null(&self.0)
+		self.0.is_null()
     }
 }
 
