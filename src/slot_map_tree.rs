@@ -21,11 +21,11 @@ impl From<KeyData> for TreeKey {
 
 impl Null for TreeKey {
     fn null() -> Self {
-        Self(DefaultKey1::null())
+        Self(<DefaultKey1 as Key>::null())
     }
 
     fn is_null(&self) -> bool {
-        self.0.is_null()
+		Key::is_null(&self.0)
     }
 }
 
