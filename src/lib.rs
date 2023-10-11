@@ -76,7 +76,7 @@ impl<K: Clone + Copy> Layer<K>  {
 impl<K: Null> Default for Layer<K>{
 	fn default() -> Self {
 		Layer {
-			layer: 0,
+			layer: usize::null(),
 			root: K::null(),
 		}
 	}
@@ -220,11 +220,13 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
 			}
 		}
 
+		pi_print_any::out_any!(log::debug, "insert_child, id={:?}, parent={:?}, order={:?}", id, parent, order);
+
         if !parent.is_null() {
             let (p_down, layer) = (
 				// self.storage.get_parent(parent), 
 				self.storage.get_down(parent).unwrap_or(&self.default_children),
-				self.storage.get_layer(parent).map_or(Layer::default(), |layer|{ Layer {layer: if layer.layer == 0 {0} else{ layer.layer + 1 }, root: layer.root}})
+				self.storage.get_layer(parent).map_or(Layer::default(), |layer|{ Layer {layer: if layer.layer.is_null() {0} else{ layer.layer + 1 }, root: layer.root}})
 			);
 
 			let (prev, next) = if order >= p_down.len {
@@ -259,6 +261,7 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
     }
     /// 根据InsertType插入到brother的前或后。 brother的layer大于0
     pub fn insert_brother(&mut self, id: K, brother: K, insert: InsertType) {
+		pi_print_any::out_any!(log::debug, "insert_brother, id={:?}, brother={:?}, insert={:?}", id, brother, &insert);
         let (parent, layer, prev, next) = match (self.storage.get_up(brother), self.storage.get_layer(brother)) {
             (Some(up), layer) => match insert {
                 InsertType::Front => (up.parent, layer.map_or(Layer::default(), |l|{l.clone()}), up.prev, brother),
@@ -286,6 +289,7 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
         &mut self,
         id: K,
     ) {
+		pi_print_any::out_any!(log::debug, "remove, id={:?}", id);
 		// 删除所有递归子节点的layer
 		if let Some(layer) = self.storage.get_layer(id) {
 			if !layer.layer().is_null() {
@@ -335,7 +339,7 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
             }
             _ => {
 				// 不存在父节，直接挂在树上
-				if layer.layer > 0 {
+				if !layer.layer.is_null() {
 					self.storage.set_layer(id, layer.clone());
 				}
 				
@@ -403,8 +407,8 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
 		// 递归向上修改count
 		self.modify_count(p_p, count as isize);
 
-		// layer > 0, 并且不是同层调整时，才递归设置layer
-        if layer.layer > 0 && count > 0 {
+		// layer.layer.is_null(), 并且不是同层调整时，才递归设置layer
+        if !layer.layer.is_null() && count > 0 {
             self.insert_tree(fix_prev, Layer {layer: layer.layer + 1, root: layer.root.clone()});
 			// 再次设置当前节点的layer，表明该节点是作为挂在主树上的一个子树的根
 			self.storage.set_layer(id, layer);
@@ -442,7 +446,7 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
     }
 	
     // 插入到树上， 就是递归设置每个子节点的layer
-	// 安全：调用该方法，确保layer > 0
+	// 安全：调用该方法，确保!layer.is_null()
     fn insert_tree(&mut self, mut id: K, layer: Layer<K>) {
         while !id.is_null() {
             let head = {
