@@ -226,7 +226,7 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
             let (p_down, layer) = (
 				// self.storage.get_parent(parent), 
 				self.storage.get_down(parent).unwrap_or(&self.default_children),
-				self.storage.get_layer(parent).map_or(Layer::default(), |layer|{ Layer {layer: if layer.layer.is_null() {0} else{ layer.layer + 1 }, root: layer.root}})
+				self.storage.get_layer(parent).map_or(Layer::default(), |layer|{ Layer {layer: if layer.layer.is_null() {usize::null()} else{ layer.layer + 1 }, root: layer.root}})
 			);
 
 			let (prev, next) = if order >= p_down.len {
