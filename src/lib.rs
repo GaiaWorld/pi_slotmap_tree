@@ -326,7 +326,7 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
 				// 当前插入节点已经有一个父节点，并且该节点的父节点与当前指定的兄弟节点的父节点不是同一个
 				// 则panic
 				if n.parent != parent {
-					out_any!(log::error, "has a parent node, id: {:?}", id);
+					out_any!(log::error, "has a parent node, id: {:?}, old parent: {:?}, new_parent: {:?}", id, n.parent, parent);
 					panic!("")
 				}
 
