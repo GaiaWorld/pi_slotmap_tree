@@ -13,8 +13,8 @@ impl Key for TreeKey {
     }
 	fn index(&self) -> usize {self.0.index()}
     
-    fn new(idx: usize) -> Self {
-        TreeKey(DefaultKey1::new(idx))
+    fn with(idx: usize) -> Self {
+        TreeKey(DefaultKey1::with(idx))
     }
 }
 
