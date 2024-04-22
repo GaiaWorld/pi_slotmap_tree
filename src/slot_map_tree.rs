@@ -12,6 +12,10 @@ impl Key for TreeKey {
         self.0.data()
     }
 	fn index(&self) -> usize {self.0.index()}
+    
+    fn new(idx: usize) -> Self {
+        TreeKey(DefaultKey1::new(idx))
+    }
 }
 
 impl From<KeyData> for TreeKey {
