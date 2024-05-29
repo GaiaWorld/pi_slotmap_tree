@@ -3,6 +3,7 @@
 /// 本模块只关心树中节点的插入、删除等逻辑部分，具体描述树状结构的节点数据由外部维护
 pub mod slot_map_tree;
 
+use core::panic;
 use std::fmt::Debug;
 use std::default::Default;
 use std::ops::Deref;
@@ -293,8 +294,10 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
 		// 删除所有递归子节点的layer
 		if let Some(layer) = self.storage.get_layer(id) {
 			if !layer.layer().is_null() {
+				if layer.layer() == 1 {
+					self.storage.remove_root(id);
+				}
 				self.remove_tree(self.storage.get_down(id).map_or(K::null(), |down|{down.head}));
-				self.storage.remove_root(id);
 			}
 		}
 
@@ -321,6 +324,7 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
 		// if id == prev || id == next {
 		// 	return layer;
 		// }
+
         let (count, fix_prev, fix_next) = match self.storage.get_up_mut(id) {
             Some(n) if !n.parent.is_null() => {
 				// 当前插入节点已经有一个父节点，并且该节点的父节点与当前指定的兄弟节点的父节点不是同一个
