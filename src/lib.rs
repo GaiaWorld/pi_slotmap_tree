@@ -254,6 +254,7 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
 				}
 				(prev, next)
 			};
+			pi_print_any::out_any!(log::debug, "insert_child1, id={:?}, parent={:?}, prev={:?}, next={:?}, head={:?}, tail={:?}", id, parent, prev, next, p_down.head, p_down.tail);
 
             self.insert_node(id, parent, layer, prev, next);
         } else {
@@ -273,6 +274,7 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
 				panic!("")
 			}
         };
+		pi_print_any::out_any!(log::debug, "insert_brother1, id={:?}, brother={:?}, pre={:?}, next={:?}, head={:?}, tail={:?}, ", id, brother, prev, next, self.storage.get_down(parent).unwrap().head, self.storage.get_down(parent).unwrap().tail);
 		if cfg!(debug_assertions) {
 			if id == parent {
 				panic!("{:?}", pi_print_any::out_any!(format, "insert_brother fail, id and parent is equal, id: {:?}, parent: {:?}", id, parent));
@@ -381,6 +383,7 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
 				self.storage.set_up(fix_next, node);
             }
 
+			
             if prev.is_null() || next.is_null() || fix_prev.is_null() || fix_next.is_null() {
                 let mut down = self.storage.down(parent).clone();
                 if prev.is_null() {
@@ -393,6 +396,7 @@ impl<K: Null + Eq + Clone + Copy, S: StorageMut<K>> Tree<K, S> {
                 } else if fix_next.is_null() {
                     down.tail = fix_prev;
                 }
+				self.storage.set_down(parent, down);
             }
         }
 		// 修改parent的children, count

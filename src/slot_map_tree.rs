@@ -1,6 +1,6 @@
 use pi_null::Null;
 use std::hash::Hash;
-use pi_slotmap::{DefaultKey as DefaultKey1, Key, KeyData, SecondaryMap};
+use pi_slotmap::{DefaultKey as DefaultKey1, Key, KeyData, SecondaryMap, SlotMap};
 
 use crate::{Up, Down, Storage, StorageMut, Layer};
 
@@ -113,4 +113,36 @@ impl StorageMut<TreeKey> for SlotMapTree {
 
     fn remove_root(&mut self, _k: TreeKey) {
     }
+}
+
+#[test]
+fn test() {
+    use crate::Tree;
+    let mut tree: Tree<TreeKey, SlotMapTree> = Tree::new(SlotMapTree::default());
+
+    let mut slotmap = SlotMap::default();
+    let p1 = TreeKey(slotmap.insert(()));
+    tree.insert_child(p1, TreeKey::null(), std::usize::MAX);
+
+    
+   
+
+    let c1 = TreeKey(slotmap.insert(()));
+    let c2 = TreeKey(slotmap.insert(()));
+    let c3 = TreeKey(slotmap.insert(()));
+    let c4 = TreeKey(slotmap.insert(()));
+    let c5 = TreeKey(slotmap.insert(()));
+    tree.insert_child(c4, p1, std::usize::MAX);
+    tree.insert_child(c3, p1, std::usize::MAX);
+    tree.insert_brother(c1, c4, crate::InsertType::Front);
+    tree.insert_brother(c2, c4, crate::InsertType::Front);
+    tree.insert_brother(c3, c4, crate::InsertType::Front);
+    tree.insert_child(c5, p1, std::usize::MAX);
+
+    println!("{:?}, {:?}, {:?}", c1, tree.get_storage().get_up(c1).unwrap().prev(), tree.get_storage().get_up(c1).unwrap().next());
+    println!("{:?}, {:?}, {:?}", c2, tree.get_storage().get_up(c2).unwrap().prev(), tree.get_storage().get_up(c2).unwrap().next());
+    println!("{:?}, {:?}, {:?}", c3, tree.get_storage().get_up(c3).unwrap().prev(), tree.get_storage().get_up(c3).unwrap().next());
+    println!("{:?}, {:?}, {:?}", c4, tree.get_storage().get_up(c4).unwrap().prev(), tree.get_storage().get_up(c4).unwrap().next());
+    println!("{:?}, {:?}, {:?}", c5, tree.get_storage().get_up(c5).unwrap().prev(), tree.get_storage().get_up(c5).unwrap().next());
+
 }
